@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 
@@ -31,7 +32,13 @@ int main(int argc, char **argv)
     // stores the state of the terminal
     struct termios term;
     if (tcgetattr(0, &term)) {
-        fprintf(stderr, "ERROR: could not save the state of the terminal\n");
+        fprintf(stderr, "ERROR: could not save the state of the terminal: %s\n", strerror(errno));
+        return 1;
+    }
+
+    term.c_lflag &= ~ECHO;
+    if (tcsetattr(0, 0, &term)) {
+        fprintf(stderr, "ERROR: could not update the state of the terminal: %s\n", strerror(errno));
         return 1;
     }
 
@@ -48,11 +55,21 @@ int main(int argc, char **argv)
     }
 
     editor.count = fread(editor.data, 1, ZED_CAPACITY, f);
+    printf("\ncontents of %s:\n\n", file_path);
     fwrite(editor.data, 1, editor.count, stdout);
 
-    printf("Input file: %s\n", file_path);
-
     fclose(f);
+
+    bool quit = false;
+    while (!quit && !feof(stdin)) {
+        int x = fgetc(stdin);
+        if (x == 'q') {
+            quit = true;
+        }
+    }
+
+    term.c_lflag |= ECHO;
+    tcsetattr(0, 0, &term);
 
     return 0;
 }

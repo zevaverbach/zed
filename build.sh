@@ -2,4 +2,4 @@
 
 set -xe
 
-clang -Wall -Wextra -ggdb -o zed main.c
+clang -Wall -Wextra -glldb -o zed main.c
