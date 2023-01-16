@@ -23,7 +23,7 @@ typedef struct {
     size_t cursor;
 } Editor;
 
-void editor_recompute_lines(Editor *e) {
+void editor_compute_lines(Editor *e) {
     size_t begin = 0;
     for (size_t i = 0; i < e->data_count; ++i) {
         if (e->data[i] == '\n') {
@@ -40,11 +40,13 @@ void editor_recompute_lines(Editor *e) {
 
 size_t editor_current_line(const Editor *e) {
     assert(e->cursor <= e->data_count);
+    Line line;
     for (size_t i = 0; i < e->lines_count; ++i) {
+        line = e->lines[i];
         if (
-            e->lines[i].begin <= e->cursor 
+            line.begin <= e->cursor 
             && 
-            e->cursor <= e->lines[i].end
+            e->cursor <= line.end
         ) return i;
     }
     return 0;
@@ -61,8 +63,6 @@ void editor_rerender(const Editor *e) {
         e->cursor - e->lines[line].begin + 1
     );
 }
-
-static Editor editor = {0};
 
 int editor_start_interactive(Editor *e) {
     if (!isatty(0)) {
@@ -111,7 +111,7 @@ int editor_start_interactive(Editor *e) {
                     }
                 } break;
                 case 'l': {
-                    if (e->cursor < EDITOR_CAPACITY) {
+                    if (e->cursor < e->data_count - 1) {
                         e->cursor += 1;
                     }
                 } break;
@@ -127,8 +127,9 @@ int editor_start_interactive(Editor *e) {
 
 }
 
-int main(int argc, char **argv)
-{
+static Editor editor;
+
+int main(int argc, char **argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: zed <input.txt>\n");
         fprintf(stderr, "ERROR: no input file was provided\n");
@@ -147,11 +148,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // load contents of file into `editor.data`
+    // assign length of file to `editor.data_count`
     editor.data_count = fread(editor.data, 1, EDITOR_CAPACITY, f);
 
     fclose(f);
-
-    editor_recompute_lines(&editor);
+    editor_compute_lines(&editor);
 
     return editor_start_interactive(&editor);
+    return 0;
 }
